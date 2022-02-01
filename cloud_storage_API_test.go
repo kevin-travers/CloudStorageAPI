@@ -1,35 +1,42 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestHealthCheck(t *testing.T) {
-	//This creates a new request to the /healthcheck endpoint
-	req, err := http.NewRequest("GET", "/healthcheck", nil)
+	// Switch to test mode so you don't get such noisy output
+	gin.SetMode(gin.TestMode)
+
+	// Setup your router, just like you did in your main function, and
+	// register your routes
+	r := gin.Default()
+	r.GET("/healthcheck", HealthCheck)
+
+	// Create the mock request you'd like to test. Make sure the second argument
+	// here is the same as one of the routes you defined in the router setup
+	// block!
+	req, err := http.NewRequest(http.MethodGet, "/healthcheck", nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Couldn't create request: %v\n", err)
 	}
-	//Creates a new recorder to record the response received by the entries endpoint.
-	rr := httptest.NewRecorder()
-	//Hits the endpoint with the recorder and request.
-	handler := http.HandlerFunc(HealthCheck)
-	handler.ServeHTTP(rr, req)
-	//Checks if the response is 200 OK.
-	if status := rr.Code; status != http.StatusOK {
-		//Sends an error tagging as a test failure
-		t.Errorf("handler returned wrong status code: got %v want %v",
-			status, http.StatusOK)
-	}
-	// Is an expected output from the endpoint.
-	expected := `[{
-		"message": "health check is healthy"
-	}]`
-	//Check if the response is equal to expected.
-	if rr.Body.String() != expected {
-		t.Errorf("handler returned unexpected body: got %v want %v",
-			rr.Body.String(), expected)
+
+	// Create a response recorder so you can inspect the response
+	w := httptest.NewRecorder()
+
+	// Perform the request
+	r.ServeHTTP(w, req)
+	fmt.Println(w.Body)
+
+	// Check to see if the response was what you expected
+	if w.Code == http.StatusOK {
+		t.Logf("Expected to get status %d is same ast %d\n", http.StatusOK, w.Code)
+	} else {
+		t.Fatalf("Expected to get status %d but instead got %d\n", http.StatusOK, w.Code)
 	}
 }
